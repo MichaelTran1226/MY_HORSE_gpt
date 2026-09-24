@@ -163,7 +163,7 @@ async function main() {
                 ? {
                     injuries: {
                       create: {
-                        bodyLocation: "foreleg",
+                        bodyLocation: "FORELEG",
                         severity: "MODERATE",
                         notes: "[SAMPLE] Recovery tracking example",
                       },
