@@ -1,0 +1,274 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 5 System Roles (RBAC)
+enum Role {
+  CLUB_MANAGER
+  HEAD_TRAINER
+  VETERINARIAN
+  GROOM
+  HORSE_OWNER
+}
+
+// 4 Horse Health Status Codes
+enum HealthStatus {
+  FIT
+  WATCH
+  INJURED
+  QUARANTINE
+}
+
+// User Account
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  phone        String?
+  isLocked     Boolean  @default(false)
+  emailVerified Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  horses         Horse[]         @relation("OwnerHorses")
+  medicalRecords MedicalRecord[] @relation("VetRecords")
+  incidents      StableIncident[]
+  auditLogs      AuditLog[]
+  sessions       Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id String @id
+  userId String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+
+model EmailVerification {
+  email String @id
+  codeHash String
+  expiresAt DateTime
+  attempts Int @default(0)
+  issuedAt DateTime @default(now())
+}
+
+// Flow 1: Horse Profile (Individual Identification - No Pedigree)
+model Horse {
+  id                String       @id @default(uuid())
+  chipId            String       @unique
+  name              String
+  breed             String
+  dateOfBirth       DateTime
+  color             String
+  gender            String
+  heightHands       Float
+  weightKg          Float
+  avatarUrl         String?
+  intakeStatus      String       @default("PENDING")
+  healthStatus      HealthStatus @default(FIT)
+  isTrainingLocked  Boolean      @default(false)
+  lockedByVetId     String?
+  lockReason        String?
+  lockedAt          DateTime?
+  ownerId           String?
+  stallId           String?      @unique
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  owner          User?            @relation("OwnerHorses", fields: [ownerId], references: [id])
+  stall          Stall?           @relation(fields: [stallId], references: [id])
+  trainingPlans  TrainingPlan[]
+  medicalRecords MedicalRecord[]
+  feedingRations FeedingRation[]
+  incidents      StableIncident[]
+  raceEntries    RaceEntry[]
+  careSchedules  CareSchedule[]
+
+  @@map("horses")
+}
+
+// Flow 2: Training Plans & Trial Runs
+model TrainingPlan {
+  id             String            @id @default(uuid())
+  horseId        String
+  title          String
+  objective      String
+  distanceMeters Int
+  intensity      String
+  surfaceType    String
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  horse    Horse             @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  sessions TrainingSession[]
+
+  @@map("training_plans")
+}
+
+model TrainingSession {
+  id          String    @id @default(uuid())
+  planId      String
+  sessionDate DateTime
+  isCompleted Boolean   @default(false)
+  trainerNote String?
+  rating      Int?
+  assignedToId String?
+  cancelledAt DateTime?
+  trialRun    TrialRun?
+
+  plan TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("training_sessions")
+}
+
+model TrialRun {
+  id                 String   @id @default(uuid())
+  sessionId          String   @unique
+  finishTimeSeconds  Float
+  maxSpeedKmh        Float
+  preHeartRate       Int
+  postHeartRate      Int
+  videoUrl           String?
+
+  session TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("trial_runs")
+}
+
+// Flow 3: Veterinary Medical Records & Injury Anatomies
+model MedicalRecord {
+  id             String        @id @default(uuid())
+  horseId        String
+  vetId          String
+  diagnosis      String
+  treatmentPlan  String
+  prescription   String?
+  withdrawalDays Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  horse     Horse         @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  vet       User          @relation("VetRecords", fields: [vetId], references: [id])
+  injuries  InjuryEntry[]
+
+  @@map("medical_records")
+}
+
+model InjuryEntry {
+  id           String   @id @default(uuid())
+  recordId     String
+  bodyLocation String
+  severity     String
+  notes        String?
+
+  record MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@map("injury_entries")
+}
+
+model CareSchedule {
+  id            String    @id @default(uuid())
+  horseId       String
+  careType      String
+  scheduledDate DateTime
+  completedDate DateTime?
+  isCompleted   Boolean   @default(false)
+
+  horse Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
+
+  @@map("care_schedules")
+}
+
+// Flow 4: Stables & Nutrition
+model Stall {
+  id           String   @id @default(uuid())
+  barnSection  String
+  stallNumber  String   @unique
+  isOccupied   Boolean  @default(false)
+
+  horse Horse?
+
+  @@map("stalls")
+}
+
+model FeedingRation {
+  id          String @id @default(uuid())
+  horseId     String
+  mealTime    String
+  hayAmountKg Float
+  grainKg     Float
+  supplements String?
+
+  horse Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
+
+  @@map("feeding_rations")
+}
+
+model StableIncident {
+  id          String   @id @default(uuid())
+  groomId     String
+  horseId     String
+  description String
+  photoUrl    String?
+  severity    String
+  reportedAt  DateTime @default(now())
+
+  groom User  @relation(fields: [groomId], references: [id])
+  horse Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
+
+  @@map("stable_incidents")
+}
+
+// Flow 5: Racing & Results
+model RaceEntry {
+  id           String      @id @default(uuid())
+  horseId      String
+  raceName     String
+  raceDate     DateTime
+  distance     Int
+  isRegistered Boolean     @default(true)
+  result       RaceResult?
+
+  horse Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
+
+  @@map("race_entries")
+}
+
+model RaceResult {
+  id              String  @id @default(uuid())
+  entryId         String  @unique
+  finishRank      Int
+  raceTimeSeconds Float
+  prizeMoney      Decimal @default(0) @db.Decimal(12, 2)
+
+  entry RaceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@map("race_results")
+}
+
+// System Audit Logs
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}

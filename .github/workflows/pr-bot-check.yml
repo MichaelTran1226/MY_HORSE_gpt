@@ -1,0 +1,148 @@
+name: "EquiFlow PR Quality Gate Bot"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches: [develop, main, master]
+
+permissions:
+  pull-requests: write
+  contents: read
+  issues: write
+
+jobs:
+  pr-quality-inspection:
+    name: "PR Quality Inspection"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🔍 Kiểm tra Quy chuẩn Tên nhánh, Tiêu đề PR & Tài liệu
+        id: meta_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            const prTitle = context.payload.pull_request.title;
+            const prBody = context.payload.pull_request.body || '';
+
+            // 1. Kiểm tra Tên nhánh: feature/TASK-XX-... hoặc bugfix/TASK-XX-... hoặc hotfix/...
+            const branchRegex = /^(feature|bugfix)\/TASK-[0-9]+-[a-z0-9-]+$/;
+            const isBranchValid = branchRegex.test(branchName);
+
+            // 2. Kiểm tra Tiêu đề PR: [TASK-XX] feat/fix/...: Mô tả
+            const titleRegex = /^\[TASK-[0-9]+\]\s+(feat|fix|style|refactor|test|docs|chore)(\([a-z0-9-]+\))?:\s+.+$/i;
+            const isTitleValid = titleRegex.test(prTitle);
+
+            // 3. Kiểm tra Tài liệu / Bằng chứng kiểm thử trong PR Body
+            const hasTaskInfo = prBody.includes('TASK-') && !prBody.includes('TASK-XX');
+            const hasImagesOrEvidence = prBody.includes('![](') || prBody.includes('http') || prBody.includes('<img');
+            const isDocValid = hasTaskInfo || hasImagesOrEvidence;
+
+            core.setOutput('branch_valid', isBranchValid ? 'PASS' : 'FAIL');
+            core.setOutput('branch_name', branchName);
+            core.setOutput('title_valid', isTitleValid ? 'PASS' : 'FAIL');
+            core.setOutput('title_text', prTitle);
+            core.setOutput('doc_valid', isDocValid ? 'PASS' : 'WARN');
+
+      - name: 🏗️ Backend Build & Prisma Check
+        id: backend_check
+        continue-on-error: true
+        run: |
+          cd backend
+          npm ci
+          npx prisma generate
+          npm run build
+
+      - name: 🎨 Frontend Lint & Build Check
+        id: frontend_check
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: 🤖 Đăng Bảng Bot Đánh Giá Lên Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchStatus = '${{ steps.meta_check.outputs.branch_valid }}';
+            const branchName = '${{ steps.meta_check.outputs.branch_name }}';
+            const titleStatus = '${{ steps.meta_check.outputs.title_valid }}';
+            const titleText = '${{ steps.meta_check.outputs.title_text }}';
+            const docStatus = '${{ steps.meta_check.outputs.doc_valid }}';
+            
+            const beOutcome = '${{ steps.backend_check.outcome }}';
+            const feOutcome = '${{ steps.frontend_check.outcome }}';
+
+            const beStatus = (beOutcome === 'success') ? 'PASS' : 'FAIL';
+            const feStatus = (feOutcome === 'success') ? 'PASS' : 'FAIL';
+
+            const badge = (status) => {
+              if (status === 'PASS') return '✅ **PASS**';
+              if (status === 'WARN') return '⚠️ **CẦN LƯU Ý**';
+              return '❌ **FAIL**';
+            };
+
+            const isAllPassed = (branchStatus === 'PASS' && titleStatus === 'PASS' && beStatus === 'PASS' && feStatus === 'PASS');
+
+            const botTable = `
+            ## 🤖 EquiFlow Quality Gate Bot — Kết Quả Kiểm Tra PR
+
+            Chào bạn! Bot kiểm thử tự động của dự án EquiFlow đã rà soát Pull Request này theo quy chuẩn môn học SWP391:
+
+            | Tiêu chí Kiểm tra | Trạng thái | Chi tiết kiểm tra |
+            |---|:---:|---|
+            | 🌿 **Tên nhánh (Branch Name)** | ${badge(branchStatus)} | \`${branchName}\` ${branchStatus === 'PASS' ? '(Hợp lệ: đúng chuẩn feature/TASK-XX-slug)' : '(LỖI: Chưa đúng chuẩn feature/TASK-XX-slug)'} |
+            | 🏷️ **Tiêu đề PR (PR Title)** | ${badge(titleStatus)} | \`${titleText}\` ${titleStatus === 'PASS' ? '(Hợp lệ: đúng chuẩn Conventional Commits)' : '(LỖI: Chưa đúng format [TASK-XX] type: message)'} |
+            | 📝 **Tài liệu & Bằng chứng (Docs/Evidence)** | ${badge(docStatus)} | ${docStatus === 'PASS' ? 'Đã điền thông tin Task / đính kèm hình ảnh demo' : 'Khuyến nghị bổ sung ảnh chụp màn hình / video demo vào PR'} |
+            | ⚙️ **Backend NestJS Build & Prisma** | ${badge(beStatus)} | ${beStatus === 'PASS' ? 'Biên dịch NestJS & tạo Prisma Client thành công (0 errors)' : 'Biên dịch Backend thất bại, vui lòng kiểm tra lại log'} |
+            | 🎨 **Frontend Oxlint & Vite Build** | ${badge(feStatus)} | ${feStatus === 'PASS' ? 'Linter oxlint sạch & Vite build thành công (0 errors)' : 'Biên dịch Frontend hoặc Lint thất bại, vui lòng chạy npm run build tại local'} |
+
+            ---
+
+            ### 🎯 Kết luận Đánh giá:
+            ${isAllPassed 
+              ? '> 🟢 **ĐỦ ĐIỀU KIỆN REVIEW**: Mã nguồn vượt qua tất cả bài kiểm tra tự động! Mời các thành viên trong nhóm vào review và duyệt merge.' 
+              : '> 🔴 **CHƯA ĐỦ ĐIỀU KIỆN MERGE**: Vui lòng sửa các mục bị đánh dấu ❌ trước khi yêu cầu Tech Lead / thành viên khác review!'}
+
+            *Cập nhật lần cuối: ${new Date().toISOString()} — EquiFlow Automation CI/CD*
+            `;
+
+            // Tìm comment cũ của bot để cập nhật (sticky comment) thay vì spam comment mới
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const botComment = comments.find(c => c.body.includes('EquiFlow Quality Gate Bot'));
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: botTable
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: botTable
+              });
+            }
+
+            // Nếu fail branch, title, backend hoặc frontend thì chặn PR check
+            if (!isAllPassed) {
+              core.setFailed('Pull Request chưa đạt tiêu chuẩn chất lượng. Vui lòng kiểm tra bảng bot comment ở trên.');
+            }

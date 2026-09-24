@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/*credentials*
+**/test-results
+**/playwright-report
+.git
+.agents
+scratch
+docs
+assets
+Giai đoạn 0 đăng nhập
+

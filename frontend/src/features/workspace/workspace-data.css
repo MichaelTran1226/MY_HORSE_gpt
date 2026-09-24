@@ -1,0 +1,200 @@
+.record-panel {
+  background: #fff;
+  border: 1px solid #dedfd6;
+  border-radius: 18px;
+  padding: 24px;
+  margin: 20px 0;
+}
+.record-panel h2 {
+  font-size: 20px;
+  margin: 0 0 14px;
+}
+.record-panel h3 {
+  font-size: 16px;
+}
+.record-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.record-toolbar input {
+  flex: 1;
+  min-width: 180px;
+}
+.record-panel input,
+.record-panel select,
+.record-panel textarea,
+.record-toolbar input,
+.record-toolbar select {
+  border: 1px solid #bfc7bc;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+  color: #252e27;
+  font: inherit;
+  max-width: 100%;
+}
+.record-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.record-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.record-form textarea {
+  min-height: 90px;
+}
+.record-form fieldset,
+.record-form .form-actions,
+.record-form .record-error {
+  grid-column: 1/-1;
+}
+.record-panel button,
+.record-toolbar button {
+  border: 0;
+  border-radius: 8px;
+  background: #315d45;
+  color: #fff;
+  padding: 10px 15px;
+  font: inherit;
+  cursor: pointer;
+}
+.record-panel button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.record-panel details {
+  border-top: 1px solid #e1e5dc;
+  padding: 16px 0;
+}
+.record-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.record-error,
+.lock-warning {
+  padding: 14px;
+  background: #fff0ed;
+  color: #8b3328;
+  border-radius: 9px;
+}
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.record-stat {
+  background: #eff2e9;
+  padding: 18px;
+  border-radius: 12px;
+}
+.record-stat strong {
+  display: block;
+  font-size: 28px;
+}
+.record-panel table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+.record-panel td,
+.record-panel th {
+  padding: 12px;
+  border-bottom: 1px solid #e2e6df;
+}
+.record-panel th {
+  font-size: 12px;
+  color: #53644e;
+}
+.record-panel dt {
+  color: #687262;
+  font-size: 12px;
+}
+.record-panel dd {
+  margin: 5px 0 18px;
+}
+.record-panel a {
+  color: #315d45;
+  font-weight: 650;
+}
+.status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 30px;
+  background: #edf1e6;
+  font-size: 12px;
+}
+.status.INJURED,
+.status.QUARANTINE {
+  background: #ffe3df;
+  color: #8b3328;
+}
+.status.WATCH {
+  background: #fff1ce;
+  color: #715200;
+}
+.injury-map {
+  border: 1px solid #d9dfd3;
+  border-radius: 12px;
+  padding: 15px;
+}
+.injury-map svg {
+  max-height: 300px;
+  width: 100%;
+}
+.map-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.map-options label {
+  display: flex;
+  align-items: center;
+}
+.record-panel .record-progress {
+  height: 14px;
+  border-radius: 5px;
+  background: #315d45;
+}
+.record-panel .empty-message {
+  padding: 28px;
+  text-align: center;
+  color: #64715d;
+}
+.record-panel :focus-visible,
+.record-toolbar :focus-visible {
+  outline: 3px solid #a87622;
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .record-form,
+  .record-grid {
+    grid-template-columns: 1fr;
+  }
+  .record-panel {
+    padding: 16px;
+  }
+  .record-panel td,
+  .record-panel th {
+    padding: 10px;
+  }
+  .record-panel .table-scroll {
+    overflow-x: auto;
+  }
+}
+
+.form-field {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+}
+.record-grid {
+  margin-top: 16px;
+}
