@@ -1,6 +1,6 @@
 # Deployment: Render + Supabase
 
-Status: configuration prepared; no remote deployment has been performed. User is creating the accounts. No custom domain or email provider has been configured.
+Status (2026-09-24): deployed to https://horse-training.onrender.com using Render service **Horse-Training**, the `MY_HORSE_gpt` repository's `main` branch, Docker, and Supabase PostgreSQL. No custom domain or verified email sender has been configured.
 
 ## 1. Supabase
 
@@ -15,6 +15,8 @@ References: https://supabase.com/docs/guides/database/connecting-to-postgres and
 Connect the Git repository and choose a **Web Service**, Docker runtime, with repository root as the build context. The checked-in `render.yaml` is also available for Blueprint setup. Select a plan in your own account; the supplied Blueprint requests free compute, with the platform's free-service limitations.
 
 Set these environment variables in Render's dashboard:
+
+The ignored local `backend/.env.cloud` file is only a private input for deployment setup. Git push does **not** upload its values to Render. Set the variables on the service itself, then deploy again. Never commit the file or copy it into the Docker image.
 
 - `DATABASE_URL`: the private Supabase session-pooler connection.
 - `APP_ORIGIN`: the exact HTTPS Render service origin, no trailing slash.
@@ -42,6 +44,8 @@ If BOOTSTRAP_PASSWORD is omitted, a random password is written to `backend/.mana
 
 Managers can create real staff/owner accounts. No sample horses or staff are seeded.
 
+The cloud manager was created on 2026-09-24. Its separate password is in ignored `backend/.manager-credentials.cloud.txt`; the local manager password remains in `.manager-credentials.local.txt`.
+
 ## 4. Email verification
 
 Public owner registration requires an email provider. Current integration uses Resend: configure a verified sender/domain and its API key in server environment variables. No fixed development code or email bypass exists. With delivery unconfigured, registration reports an explicit service-unavailable error; manager-created accounts still work.
@@ -67,4 +71,9 @@ Take a database backup before migrations on an existing project. The initial mig
 
 ## Operational limits
 
-This is a single-instance course-project deployment. Authentication rate limiting is process-local; multi-instance deployment requires a shared limiter. Free compute may sleep. Email, cloud database reachability, HTTPS cookie behavior, backups and live performance must be verified after accounts are connected. Optional stable-care/racing/finance UI is not completed in this core build.
+This is a single-instance course-project deployment. Authentication rate limiting is process-local; multi-instance deployment requires a shared limiter. Free compute may sleep. Cloud database reachability and HTTPS cookie behavior were verified on 2026-09-24; email delivery, backups/restore and live performance targets remain unverified. Optional stable-care/racing/finance UI is not completed in this core build.
+
+## Deployment failures resolved
+
+- **Horse-Training / Prisma P1012:** Docker built successfully, but startup failed because Render had no `DATABASE_URL`. Configured the cloud database URL with TLS and a five-connection limit, `APP_ORIGIN`, `NODE_ENV`, `TRUST_PROXY`, and `/api/status` health check, then redeployed successfully.
+- **Racehorse / missing requirements.txt:** the older service points to a different repository and uses Python. It is not the active EquiFlow deployment and was left unchanged. Use **Horse-Training** for this project's deployments.

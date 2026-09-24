@@ -62,3 +62,5 @@
 *.pem
 *.key
 *.pfx
+**/.sample-credentials.*
+**/.sample-accounts.*

@@ -1,6 +1,6 @@
 # EquiFlow delivery plan
 
-Source of truth: `subject.md`; retain the existing React, NestJS and PostgreSQL architecture. The user requested completion through deployment and has no hosting/database accounts yet.
+Source of truth: `subject.md`; retain the existing React, NestJS and PostgreSQL architecture. The user requested completion through deployment. Render and Supabase are now connected.
 
 ## Acceptance and execution order
 
@@ -22,7 +22,7 @@ Source of truth: `subject.md`; retain the existing React, NestJS and PostgreSQL 
 
 ## Deployment inputs
 
-No hosting/database accounts are currently available. Prepare portable deployment configuration first. Actual deployment requires the user's hosting account, database connection configured privately, and an email provider/sender for verification messages.
+Render Horse-Training and Supabase PostgreSQL are connected. Email delivery still requires a verified provider/sender. Google OAuth is a proposed integration, not implemented.
 
 ## Open requirements and evidence
 
@@ -34,3 +34,7 @@ No hosting/database accounts are currently available. Prepare portable deploymen
 ## Boundaries
 
 Keep `subject.md` unchanged. Preserve user files. Do not publish secrets, send external messages, create paid services or claim deployment without observed evidence. Required schema, application, test and deployment configuration changes are authorized by the end-to-end build request.
+
+## Sample data and desktop UX (2026-09-24)
+
+User authorized labeled sample business records and six role accounts, an English desktop dashboard using database values, and a complete Vietnamese README. The explicit sample seed is idempotent and preserves existing data. Credentials remain in ignored local files. Mobile redesign is outside this increment. README contains 15 demonstration scenarios; it does not claim 15 optional modules are implemented.

@@ -1,4 +1,47 @@
 import { test, expect } from "@playwright/test";
+
+test("desktop dashboard matches saved records and supports retry", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await login(page, "CLUB_MANAGER");
+  await expect(page.locator(".metric-card")).toHaveCount(4);
+  const records = await (await page.request.get("/api/horses")).json();
+  await expect(
+    page
+      .locator(".metric-card")
+      .filter({ hasText: "Horses in view" })
+      .locator("strong"),
+  ).toHaveText(String(records.length));
+  await expect(
+    page
+      .locator(".metric-card")
+      .filter({ hasText: "Training restrictions" })
+      .locator("strong"),
+  ).toHaveText(
+    String(
+      records.filter((h: { isTrainingLocked: boolean }) => h.isTrainingLocked)
+        .length,
+    ),
+  );
+  await page.route("**/api/horses", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Temporary dashboard outage" }),
+    }),
+  );
+  await page.getByRole("button", { name: "Refresh data" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.unroute("**/api/horses");
+  await page.getByRole("button", { name: "Retry dashboard" }).click();
+  await expect(page.locator(".metric-card")).toHaveCount(4);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
 async function login(page: import("@playwright/test").Page, role: string) {
   await page.goto("/login");
   await page

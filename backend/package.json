@@ -17,7 +17,8 @@
     "test": "node --test test/auth-security.test.cjs",
     "test:integration": "node --test test/integration.test.cjs",
     "bootstrap:manager": "node scripts/bootstrap-manager.cjs",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "seed:sample": "node scripts/seed-sample.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.6",

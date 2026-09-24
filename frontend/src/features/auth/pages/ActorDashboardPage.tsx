@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -18,11 +18,36 @@ import { TrainingCalendar } from "@/features/workspace/TrainingCalendar";
 import { StallWorkspace } from "@/features/workspace/StallWorkspace";
 import { CareDue } from "@/features/workspace/CareDue";
 
+import { WorkspaceOverview } from "@/features/workspace/WorkspaceOverview";
+const unavailable = new Set([
+  "Financial reports",
+  "Supplies catalog",
+  "Stable supplies",
+  "Meal rations",
+  "Daily care",
+  "Incident reports",
+  "Race registration",
+  "Club reports",
+]);
 export function ActorDashboardPage() {
   const user = readUser();
   const [params] = useSearchParams();
   const [menu, setMenu] = useState(false);
   const [logout, setLogout] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const notify = () => {
+      setSaved(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setSaved(false), 4500);
+    };
+    window.addEventListener("equiflow:records-changed", notify);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("equiflow:records-changed", notify);
+    };
+  }, []);
   if (!user) return <Navigate to="/login" replace />;
   const role = roles[user.role];
   const page = params.get("page");
@@ -63,6 +88,9 @@ export function ActorDashboardPage() {
                 {String(i + 1).padStart(2, "0")}
               </span>
               {name}
+              {unavailable.has(name) && (
+                <span className="feature-availability">Planned</span>
+              )}
             </Link>
           ))}
         </nav>
@@ -101,6 +129,11 @@ export function ActorDashboardPage() {
           </div>
         </header>
         <main className="workspace-content">
+          {saved && (
+            <div className="save-notice" role="status">
+              Changes saved successfully.
+            </div>
+          )}
           <p className="workspace-eyebrow">
             {role.name.toUpperCase()} WORKSPACE
           </p>
@@ -110,21 +143,7 @@ export function ActorDashboardPage() {
           </p>
           {!feature ? (
             <>
-              <section className="workspace-banner">
-                <div>
-                  <span>ONE CLUB. FIVE ROLES.</span>
-                  <h2>
-                    Good care starts
-                    <br />
-                    with a clear view.
-                  </h2>
-                  <p>Your tools, organized around your responsibilities.</p>
-                </div>
-                <img
-                  src="/images/equine-editorial.webp"
-                  alt="Horse at the club"
-                />
-              </section>
+              <WorkspaceOverview />
               <div className="section-heading">
                 <h2>Your workspace</h2>
                 <span>{role.features.length} areas</span>
@@ -134,7 +153,10 @@ export function ActorDashboardPage() {
                   <Link
                     key={name}
                     to={"/app?page=" + encodeURIComponent(name)}
-                    className="feature-card"
+                    className={
+                      "feature-card" +
+                      (unavailable.has(name) ? " unavailable" : "")
+                    }
                   >
                     <div>
                       <span className="feature-index">
@@ -145,7 +167,10 @@ export function ActorDashboardPage() {
                     <h3>{name}</h3>
                     <p>{description}</p>
                     <span className="feature-action">
-                      Open workspace <ChevronRight size={14} />
+                      {unavailable.has(name)
+                        ? "Planned extension"
+                        : "Open workspace"}{" "}
+                      <ChevronRight size={14} />
                     </span>
                   </Link>
                 ))}
@@ -173,16 +198,7 @@ export function ActorDashboardPage() {
                 </div>
               ))}
             </section>
-          ) : [
-              "Financial reports",
-              "Supplies catalog",
-              "Stable supplies",
-              "Meal rations",
-              "Daily care",
-              "Incident reports",
-              "Race registration",
-              "Club reports",
-            ].includes(feature[0]) ? (
+          ) : unavailable.has(feature[0]) ? (
             <section className="record-panel">
               <h2>Optional extension</h2>
               <p>
